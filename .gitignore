@@ -1,0 +1,31 @@
+# Dependencies and builds
+node_modules/
+.next/
+dist/
+out/
+.vercel/
+
+# Secrets
+.env
+.env.*
+!.env.example
+
+# Capture data never goes in git: footage, splats, camera solves, renders
+*.mp4
+*.MP4
+*.mov
+*.insv
+*.insp
+*.dng
+*.SRT
+*.ply
+*.spz
+*.splat
+*.ksplat
+*.sog
+*.rad
+captures/
+renders/
+colmap/
+
+.DS_Store
