@@ -1,0 +1,343 @@
+<title>Location Lab</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600&family=Geist+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: editor shell. Header, then three columns: locations | viewport + timeline | stills, moves, card. Dark-only by design, tokens from Scene Builder v2, type and radius from the Film Maker design system. */
+:root {
+  --ink: #0e0e12;
+  --panel: #1a1a22;
+  --card: #26262e;
+  --line: #3a3a44;
+  --fg: #ececf0;
+  --muted: #8a8a92;
+  --gold: #ffc943;
+  --gold-ink: #2a2005;
+  --clean: #66d575;
+  --smear: #ff9e42;
+  --mask: rgba(14, 14, 18, 0.62);
+  --r: 10px;
+  --r-sm: 6px;
+  --sans: "Geist", "Geist Variable", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --mono: "Geist Mono", ui-monospace, "SF Mono", Menlo, monospace;
+  --fs-xs: 11px; --fs-sm: 12px; --fs-md: 13px; --fs-lg: 15px; --fs-xl: 18px;
+  color-scheme: dark;
+}
+html, body { height: 100%; }
+body {
+  background: var(--ink); color: var(--fg); font-family: var(--sans); font-size: var(--fs-md);
+  line-height: 1.45; -webkit-font-smoothing: antialiased;
+}
+* { box-sizing: border-box; }
+button, textarea { font: inherit; color: inherit; }
+:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }
+.ico { width: 16px; height: 16px; stroke-width: 1.75; flex: none; }
+.ico-sm { width: 14px; height: 14px; }
+
+.app { display: grid; grid-template-rows: auto 1fr; min-height: 100%; }
+
+/* Header */
+.bar {
+  display: flex; align-items: center; gap: 16px; padding-block: 10px;
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px));
+  border-bottom: 1px solid var(--line); background: var(--panel); flex-wrap: wrap;
+}
+.brand { display: flex; align-items: center; gap: 10px; font-weight: 600; font-size: var(--fs-lg); }
+.brand .sep { color: var(--line); font-weight: 400; }
+.brand .loc { font-weight: 500; }
+.chip {
+  font-size: var(--fs-xs); color: var(--muted); border: 1px solid var(--line); border-radius: 999px;
+  padding: 2px 8px; letter-spacing: 0.02em;
+}
+.spacer { flex: 1; }
+.seg { display: inline-flex; border: 1px solid var(--line); border-radius: var(--r-sm); overflow: hidden; }
+.seg button {
+  background: transparent; border: 0; padding: 5px 10px; font-family: var(--mono); font-size: var(--fs-sm); color: var(--muted); cursor: pointer;
+}
+.seg button + button { border-left: 1px solid var(--line); }
+.seg button[aria-pressed="true"] { background: var(--card); color: var(--fg); }
+.switch { display: inline-flex; align-items: center; gap: 8px; cursor: pointer; font-size: var(--fs-md); color: var(--fg); background: none; border: 0; padding: 4px; }
+.switch .track { width: 30px; height: 18px; border-radius: 999px; background: var(--line); position: relative; transition: background-color .15s ease-out; }
+.switch .knob { position: absolute; top: 2px; left: 2px; width: 14px; height: 14px; border-radius: 50%; background: var(--fg); transition: transform .15s ease-out; }
+.switch[aria-checked="true"] .track { background: var(--clean); }
+.switch[aria-checked="true"] .knob { transform: translateX(12px); background: var(--ink); }
+.btn {
+  display: inline-flex; align-items: center; gap: 6px; border-radius: var(--r-sm); padding: 6px 12px;
+  border: 1px solid var(--line); background: var(--card); cursor: pointer; font-size: var(--fs-md); white-space: nowrap;
+}
+.btn:hover { border-color: var(--muted); }
+.btn-primary { background: var(--gold); color: var(--gold-ink); border-color: var(--gold); font-weight: 600; }
+.btn-primary:hover { border-color: var(--fg); }
+.icon-btn { padding: 6px; }
+
+/* Body columns */
+.cols { display: grid; grid-template-columns: 220px minmax(0, 1fr) 320px; min-height: 0; }
+.rail, .side { background: var(--panel); min-width: 0; }
+.rail { border-right: 1px solid var(--line); padding: 14px 12px; display: flex; flex-direction: column; gap: 12px; }
+.side { border-left: 1px solid var(--line); display: flex; flex-direction: column; overflow-y: auto; }
+.label { font-size: var(--fs-xs); color: var(--muted); letter-spacing: 0.06em; text-transform: uppercase; font-weight: 500; }
+.loc-item {
+  display: grid; gap: 2px; text-align: left; width: 100%; padding: 10px; border-radius: var(--r-sm);
+  border: 1px solid transparent; background: transparent; cursor: pointer;
+}
+.loc-item[aria-current="true"] { background: var(--card); border-color: var(--line); }
+.loc-item .name { font-weight: 500; }
+.loc-item .meta { font-size: var(--fs-sm); color: var(--muted); }
+.loc-item .state { display: flex; align-items: center; gap: 6px; font-size: var(--fs-sm); color: var(--smear); margin-top: 4px; }
+.dot { width: 6px; height: 6px; border-radius: 50%; background: currentColor; flex: none; }
+.load {
+  margin-top: auto; display: grid; gap: 4px; justify-items: center; text-align: center; padding: 14px 10px;
+  border: 1px dashed var(--line); border-radius: var(--r); background: transparent; cursor: pointer; color: var(--muted);
+}
+.load strong { color: var(--fg); font-weight: 500; }
+.load span { font-size: var(--fs-sm); }
+
+/* Stage */
+.stage { display: grid; grid-template-rows: minmax(0, 1fr) auto; min-width: 0; min-height: 0; }
+.viewport { position: relative; overflow: hidden; background: #000; min-height: 360px; }
+.plate-wrap { position: absolute; inset: 0; }
+.viewport img.plate { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; max-width: none; }
+.frame { position: absolute; box-shadow: 0 0 0 9999px var(--mask); border: 1px solid rgba(255, 201, 67, 0.7); pointer-events: none; }
+.frame .thirds { position: absolute; inset: 0; background:
+  linear-gradient(to right, transparent calc(33.333% - .5px), rgba(236,236,240,.18) calc(33.333% - .5px), rgba(236,236,240,.18) calc(33.333% + .5px), transparent calc(33.333% + .5px), transparent calc(66.666% - .5px), rgba(236,236,240,.18) calc(66.666% - .5px), rgba(236,236,240,.18) calc(66.666% + .5px), transparent calc(66.666% + .5px)),
+  linear-gradient(to bottom, transparent calc(33.333% - .5px), rgba(236,236,240,.18) calc(33.333% - .5px), rgba(236,236,240,.18) calc(33.333% + .5px), transparent calc(33.333% + .5px), transparent calc(66.666% - .5px), rgba(236,236,240,.18) calc(66.666% - .5px), rgba(236,236,240,.18) calc(66.666% + .5px), transparent calc(66.666% + .5px)); }
+.hud { position: absolute; display: flex; gap: 8px; align-items: center; }
+.hud-tl { top: 12px; left: 12px; }
+.hud-tr { top: 12px; right: 12px; }
+.hud-bl { bottom: 12px; left: 12px; }
+.pill {
+  display: inline-flex; align-items: center; gap: 6px; background: rgba(14,14,18,.82); border: 1px solid var(--line);
+  border-radius: 999px; padding: 4px 10px; font-size: var(--fs-sm);
+}
+.pill.mono { font-family: var(--mono); }
+.pill.clean { color: var(--clean); }
+.minimap {
+  position: absolute; right: 12px; bottom: 12px; width: 260px; background: rgba(14,14,18,.9);
+  border: 1px solid var(--line); border-radius: var(--r); padding: 10px 10px 8px;
+}
+.minimap header { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 4px; }
+.minimap svg { display: block; width: 100%; height: auto; }
+.legend { display: flex; gap: 12px; font-size: var(--fs-xs); color: var(--muted); margin-top: 4px; }
+.legend span { display: inline-flex; align-items: center; gap: 5px; }
+.swatch { width: 10px; height: 10px; border-radius: 2px; }
+.viewport.map-off .heat { opacity: 0; }
+.heat { transition: opacity .15s ease-out; }
+
+/* Timeline */
+.timeline { border-top: 1px solid var(--line); background: var(--panel); padding: 12px 16px 14px; display: grid; gap: 10px; }
+.tl-head { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.tl-title { font-weight: 500; }
+.tl-meta { color: var(--muted); font-size: var(--fs-sm); font-family: var(--mono); }
+.track { position: relative; height: 40px; border-radius: var(--r-sm); background: var(--ink); border: 1px solid var(--line); }
+.track .ticks { position: absolute; inset: 0; display: flex; justify-content: space-between; padding: 0 8px; align-items: flex-end; }
+.track .ticks span { font-family: var(--mono); font-size: var(--fs-xs); color: var(--muted); padding-bottom: 2px; }
+.track .path { position: absolute; left: 8px; right: 8px; top: 14px; height: 2px; background: var(--line); }
+.kf {
+  position: absolute; top: 9px; width: 12px; height: 12px; transform: translateX(-50%) rotate(45deg);
+  background: var(--fg); border: 0; border-radius: 2px; cursor: pointer; padding: 0;
+}
+.kf[aria-pressed="true"] { background: var(--gold); }
+.playhead { position: absolute; top: -4px; bottom: -4px; width: 2px; background: var(--gold); transform: translateX(-1px); }
+
+/* Side panel */
+.section { padding: 14px 14px 16px; border-bottom: 1px solid var(--line); display: grid; gap: 10px; }
+.section-head { display: flex; justify-content: space-between; align-items: center; }
+.stills { display: grid; gap: 8px; list-style: none; margin: 0; padding: 0; }
+.still { display: grid; grid-template-columns: 88px minmax(0, 1fr); gap: 10px; align-items: start; }
+.still img { width: 88px; height: 50px; object-fit: cover; border-radius: var(--r-sm); border: 1px solid var(--line); display: block; }
+.still .n { font-family: var(--mono); color: var(--muted); font-size: var(--fs-xs); }
+.still .cap { font-size: var(--fs-sm); }
+.still .locks { font-size: var(--fs-sm); color: var(--muted); }
+.status { display: inline-flex; align-items: center; gap: 6px; font-size: var(--fs-sm); color: var(--muted); }
+.card-text {
+  width: 100%; min-height: 128px; resize: vertical; background: var(--ink); border: 1px solid var(--line);
+  border-radius: var(--r-sm); padding: 10px; font-size: var(--fs-md); line-height: 1.5;
+}
+.provenance { display: flex; align-items: center; gap: 6px; font-size: var(--fs-sm); color: var(--muted); }
+.donts { margin: 0; padding-left: 18px; display: grid; gap: 4px; font-size: var(--fs-sm); }
+.export-note { font-size: var(--fs-sm); color: var(--muted); }
+.export-note code { font-family: var(--mono); font-size: var(--fs-xs); color: var(--fg); overflow-wrap: anywhere; }
+
+@media (max-width: 1100px) {
+  .cols { grid-template-columns: minmax(0, 1fr); }
+  .rail { border-right: 0; border-bottom: 1px solid var(--line); }
+  .load { margin-top: 0; }
+  .side { border-left: 0; overflow: visible; }
+  .viewport { min-height: 0; aspect-ratio: 16 / 9; max-width: 100%; }
+}
+@media (max-width: 560px) {
+  .minimap { position: static; width: auto; margin: 0; border-radius: 0; border-width: 1px 0 0; }
+  .viewport { aspect-ratio: auto; height: auto; display: grid; }
+  .viewport .plate-wrap { position: relative; inset: auto; aspect-ratio: 16 / 9; }
+}
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+</style>
+
+<div class="app">
+  <header class="bar">
+    <div class="brand">
+      <span>Location Lab</span><span class="sep">/</span><span class="loc">Silo No. 5</span>
+    </div>
+    <span class="chip">Draft · example marks and moves</span>
+    <div class="spacer"></div>
+    <div class="seg" role="group" aria-label="Frame ratio" id="ratio">
+      <button type="button" data-ar="2.333" aria-pressed="true">21:9</button>
+      <button type="button" data-ar="1.778" aria-pressed="false">16:9</button>
+      <button type="button" data-ar="0.5625" aria-pressed="false">9:16</button>
+    </div>
+    <button type="button" class="switch" role="switch" aria-checked="true" id="mapToggle">
+      <span class="track"><span class="knob"></span></span>Clean-angle map
+    </button>
+    <button type="button" class="btn btn-primary" id="exportBtn"><i data-lucide="package" class="ico"></i>Export pack</button>
+  </header>
+
+  <div class="cols">
+    <aside class="rail" aria-label="Locations">
+      <div class="label">Locations</div>
+      <button type="button" class="loc-item" aria-current="true">
+        <span class="name">Silo No. 5</span>
+        <span class="meta">Old Port · shot 8 Sep 2026</span>
+        <span class="meta">13 clips · 27 stills</span>
+        <span class="state"><span class="dot"></span>Splat not trained yet</span>
+      </button>
+      <button type="button" class="load">
+        <i data-lucide="upload" class="ico"></i>
+        <strong>Load a splat</strong>
+        <span>.ply or .spz, plus COLMAP cameras for the map</span>
+      </button>
+    </aside>
+
+    <main class="stage">
+      <div class="viewport" id="viewport">
+        <div class="plate-wrap">
+          <img class="plate" src="img/viewport.jpg" alt="Silo No. 5 from the river side, drone frame standing in for the splat render">
+          <div class="frame" id="frame"><div class="thirds"></div></div>
+          <div class="hud hud-tl"><span class="pill">Drone frame stands in for the splat</span></div>
+          <div class="hud hud-tr"><span class="pill clean heat"><span class="dot"></span>Clean angle</span></div>
+          <div class="hud hud-bl">
+            <span class="pill mono">24 mm</span>
+            <button type="button" class="btn"><i data-lucide="camera" class="ico"></i>Mark still</button>
+          </div>
+        </div>
+        <section class="minimap heat" aria-label="Clean-angle map, top view">
+          <header><span class="label">Top view</span><span class="label" style="text-transform:none;letter-spacing:0">Drone stood here</span></header>
+          <svg viewBox="0 0 260 150" role="img" aria-labelledby="mmTitle">
+            <title id="mmTitle">Top view of Silo No. 5 with drone positions along the river side, a green clean zone around them, an orange smear zone on the city side, and the current camera inside the clean zone.</title>
+            <rect x="0" y="0" width="260" height="38" fill="var(--smear)" opacity="0.16"/>
+            <text x="8" y="14" font-size="11" fill="var(--muted)" font-family="var(--sans)">City side</text>
+            <path d="M 30 92 Q 30 128 70 128 L 190 128 Q 230 128 230 92 L 230 70" fill="none" stroke="var(--clean)" stroke-opacity="0.28" stroke-width="30" stroke-linecap="round" stroke-linejoin="round"/>
+            <rect x="52" y="58" width="156" height="30" rx="2" fill="var(--card)" stroke="var(--muted)" stroke-width="1"/>
+            <text x="130" y="77" font-size="11" fill="var(--fg)" text-anchor="middle" font-family="var(--sans)">Silo</text>
+            <g fill="var(--fg)">
+              <circle cx="32" cy="104" r="2.5"/><circle cx="44" cy="122" r="2.5"/><circle cx="72" cy="130" r="2.5"/><circle cx="104" cy="128" r="2.5"/>
+              <circle cx="136" cy="131" r="2.5"/><circle cx="168" cy="128" r="2.5"/><circle cx="198" cy="127" r="2.5"/><circle cx="222" cy="114" r="2.5"/><circle cx="229" cy="86" r="2.5"/>
+            </g>
+            <path d="M 112 118 L 98 92 L 134 92 Z" fill="var(--gold)" fill-opacity="0.22" stroke="var(--gold)" stroke-width="1"/>
+            <circle cx="112" cy="118" r="4.5" fill="var(--gold)"/>
+            <text x="8" y="146" font-size="11" fill="var(--muted)" font-family="var(--sans)">River side</text>
+          </svg>
+          <div class="legend">
+            <span><span class="swatch" style="background:var(--clean);opacity:.6"></span>Renders clean</span>
+            <span><span class="swatch" style="background:var(--smear);opacity:.6"></span>Smears</span>
+            <span><span class="swatch" style="background:var(--gold)"></span>Camera</span>
+          </div>
+        </section>
+      </div>
+
+      <section class="timeline" aria-label="Move timeline">
+        <div class="tl-head">
+          <button type="button" class="btn icon-btn" aria-label="Play move"><i data-lucide="play" class="ico"></i></button>
+          <span class="tl-title">Move 01 · Push along the river face</span>
+          <span class="tl-meta">6.0 s · 4 keyframes · 24 mm fixed</span>
+          <div class="spacer"></div>
+          <button type="button" class="btn"><i data-lucide="diamond-plus" class="ico"></i>Add keyframe</button>
+          <button type="button" class="btn"><i data-lucide="clapperboard" class="ico"></i>Render clip</button>
+        </div>
+        <div class="track">
+          <div class="path"></div>
+          <button type="button" class="kf" style="left:calc(8px + (100% - 16px) * 0)" aria-label="Keyframe 1 at 0.0 seconds" aria-pressed="false"></button>
+          <button type="button" class="kf" style="left:calc(8px + (100% - 16px) * .30)" aria-label="Keyframe 2 at 1.8 seconds" aria-pressed="true"></button>
+          <button type="button" class="kf" style="left:calc(8px + (100% - 16px) * .65)" aria-label="Keyframe 3 at 3.9 seconds" aria-pressed="false"></button>
+          <button type="button" class="kf" style="left:calc(8px + (100% - 16px) * 1)" aria-label="Keyframe 4 at 6.0 seconds" aria-pressed="false"></button>
+          <div class="playhead" style="left:calc(8px + (100% - 16px) * .40)"></div>
+          <div class="ticks" aria-hidden="true"><span>0 s</span><span>1</span><span>2</span><span>3</span><span>4</span><span>5</span><span>6 s</span></div>
+        </div>
+      </section>
+    </main>
+
+    <aside class="side" aria-label="Pack contents">
+      <section class="section">
+        <div class="section-head"><span class="label">Stills · Image order</span><span class="status">3 of 9</span></div>
+        <ol class="stills">
+          <li class="still"><img src="img/still-01.jpg" alt=""><div><div class="n">Image 1</div><div class="cap">Wide, willow side</div><div class="locks">Locks silhouette and light direction</div></div></li>
+          <li class="still"><img src="img/still-02.jpg" alt=""><div><div class="n">Image 2</div><div class="cap">Gallery, mid height</div><div class="locks">Locks rust and concrete texture</div></div></li>
+          <li class="still"><img src="img/still-03.jpg" alt=""><div><div class="n">Image 3</div><div class="cap">High orbit, canal</div><div class="locks">Locks canal and city layout</div></div></li>
+        </ol>
+      </section>
+
+      <section class="section">
+        <div class="section-head"><span class="label">Moves · Video order</span><span class="status">1 of 3 · 6 of 15 s</span></div>
+        <div class="still">
+          <img src="img/move-01.jpg" alt="">
+          <div><div class="n">Video 1</div><div class="cap">Push along the river face</div><div class="status"><span class="dot"></span>Not rendered</div></div>
+        </div>
+      </section>
+
+      <section class="section">
+        <div class="section-head"><span class="label">Card</span><button type="button" class="btn"><i data-lucide="refresh-cw" class="ico ico-sm"></i>Redraft</button></div>
+        <label class="provenance" for="canon"><i data-lucide="cpu" class="ico ico-sm"></i>Drafted by Gemma 4 on ArtPC from the stills. Edit freely.</label>
+        <textarea id="canon" class="card-text">A decommissioned concrete grain elevator on Montreal's Old Port: a long ribbed silo block and rust-streaked steel conveyor galleries, willows and wild trees at its base, the Lachine Canal and the St. Lawrence on either side. Cool late-afternoon light from camera left, clear sky, muted concrete grey against rust orange.</textarea>
+        <div class="label">Don'ts</div>
+        <ul class="donts">
+          <li>No readable signs, logos or watermarks.</li>
+          <li>Keep ribbed concrete and rust galleries. Never glass or steel cladding.</li>
+          <li>The river stays open water on the south side.</li>
+        </ul>
+      </section>
+
+      <section class="section">
+        <div class="label">Export target</div>
+        <p class="export-note" style="margin:0">Writes <code>library/places/silo-no5/</code> with card.md, refs/01 to 03, and urls.txt pointing at the rendered clip on Vercel Blob.</p>
+      </section>
+    </aside>
+  </div>
+</div>
+
+<script src="https://unpkg.com/lucide@0.460.0/dist/umd/lucide.min.js"></script>
+<script>
+(function () {
+  try { window.lucide && window.lucide.createIcons(); } catch (e) {}
+  var vp = document.getElementById('viewport');
+  var frame = document.getElementById('frame');
+  var ar = 2.333;
+  function fit() {
+    var host = frame.parentElement.getBoundingClientRect();
+    if (!host.width || !host.height) return;
+    var pad = 24, w = host.width - pad * 2, h = host.height - pad * 2;
+    var fw = w, fh = w / ar;
+    if (fh > h) { fh = h; fw = h * ar; }
+    frame.style.width = fw + 'px'; frame.style.height = fh + 'px';
+    frame.style.left = (host.width - fw) / 2 + 'px'; frame.style.top = (host.height - fh) / 2 + 'px';
+  }
+  document.querySelectorAll('#ratio button').forEach(function (b) {
+    b.addEventListener('click', function () {
+      document.querySelectorAll('#ratio button').forEach(function (o) { o.setAttribute('aria-pressed', String(o === b)); });
+      ar = parseFloat(b.dataset.ar); fit();
+    });
+  });
+  var t = document.getElementById('mapToggle');
+  t.addEventListener('click', function () {
+    var on = t.getAttribute('aria-checked') !== 'true';
+    t.setAttribute('aria-checked', String(on));
+    vp.classList.toggle('map-off', !on);
+  });
+  document.querySelectorAll('.kf').forEach(function (k) {
+    k.addEventListener('click', function () {
+      document.querySelectorAll('.kf').forEach(function (o) { o.setAttribute('aria-pressed', String(o === k)); });
+    });
+  });
+  window.addEventListener('resize', fit);
+  if ('ResizeObserver' in window) new ResizeObserver(fit).observe(frame.parentElement);
+  fit();
+})();
+</script>
