@@ -2,6 +2,10 @@
 
 Scout a real place in the browser, then hand it to Seedance 2.0.
 
+![Location Lab scouting screen draft: viewport with clean-angle map, stills and moves lists, location card and export target](docs/screenshots/scouting-screen.jpg)
+
+*Screenshot of the draft scouting screen (static HTML, 1440 x 900). A drone frame stands in for the splat render, and the marks and moves are examples.*
+
 Location Lab loads a Gaussian splat of a captured location, lets you fly a camera through it,
 mark stills and record camera moves, and exports a reference pack for Seedance's
 reference-to-video mode. A clean-angle map shows where the capture is sharp, so you pick
@@ -12,6 +16,14 @@ angles that render well before you render them.
 Design phase. The first screen draft is in
 [`drafts/2026-10-21-scouting-screen/`](drafts/2026-10-21-scouting-screen/index.html).
 It uses a drone frame of Silo No. 5 in Montreal's Old Port as a stand-in for the splat.
+There is no app code yet.
+
+To look at the draft, open `drafts/2026-10-21-scouting-screen/index.html` in a browser straight from disk.
+It is one HTML file plus the images in `img/`, with no build step. It loads Geist from Google Fonts and Lucide
+icons from unpkg, so it needs a network connection to look right.
+
+The screen has a locations list, the viewport with a clean-angle map, ordered stills and moves, an editable
+location card with don'ts, a keyframe timeline for camera moves, and the export target.
 
 ## How it fits
 
