@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Rooftop mesh</title>
+<style>
+  html, body { margin: 0; height: 100%; background: #111; color: #ddd; font: 13px/1.4 system-ui, sans-serif; }
+  canvas { display: block; }
+  #hud { position: fixed; left: 12px; top: 12px; background: rgba(0,0,0,.55); padding: 8px 10px; border-radius: 6px; }
+</style>
+<script type="importmap">
+{ "imports": {
+  "three": "https://cdn.jsdelivr.net/npm/three@0.178.0/build/three.module.js",
+  "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.178.0/examples/jsm/"
+} }
+</script>
+</head>
+<body>
+<div id="hud"><label><input type="checkbox" id="wire"> wireframe</label> <span id="info">loading…</span></div>
+<script type="module">
+import * as THREE from "three";
+import { OrbitControls } from "three/addons/controls/OrbitControls.js";
+import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
+
+// Served from the repo root; ?capture=<name> picks captures/<name>/mesh.glb.
+const capture = new URLSearchParams(location.search).get("capture") ?? "rooftop-close-v1";
+const base = `../../captures/${capture}/`;
+const renderer = new THREE.WebGLRenderer({ antialias: true });
+renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+document.body.appendChild(renderer.domElement);
+const scene = new THREE.Scene();
+const camera = new THREE.PerspectiveCamera(50, 1, 0.01, 1000);
+const controls = new OrbitControls(camera, renderer.domElement);
+controls.enableDamping = true;
+
+// Same start pose as the splat viewer (view.json is already flipped to y-up).
+const pose = await fetch(base + "view.json", { cache: "no-store" }).then(r => r.json());
+camera.position.fromArray(pose.camera);
+controls.target.fromArray(pose.target);
+
+const gltf = await new GLTFLoader().loadAsync(base + "mesh.glb");
+const meshes = [];
+gltf.scene.traverse(o => {
+  if (!o.isMesh) return;
+  // Vertex colors carry the splat colors; show them unlit so they match the frames.
+  o.material = new THREE.MeshBasicMaterial({ vertexColors: !!o.geometry.attributes.color, side: THREE.DoubleSide });
+  meshes.push(o);
+});
+scene.add(gltf.scene);
+const tris = meshes.reduce((n, m) => n + m.geometry.index.count / 3, 0);
+document.getElementById("info").textContent = `${tris.toLocaleString()} triangles · ${capture}`;
+document.getElementById("wire").onchange = e => meshes.forEach(m => (m.material.wireframe = e.target.checked));
+window.view = { camera, controls, pose };
+
+function resize() {
+  renderer.setSize(innerWidth, innerHeight);
+  camera.aspect = innerWidth / innerHeight;
+  camera.updateProjectionMatrix();
+}
+addEventListener("resize", resize);
+resize();
+renderer.setAnimationLoop(() => { controls.update(); renderer.render(scene, camera); });
+</script>
+</body>
+</html>
