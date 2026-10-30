@@ -1,0 +1,82 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Rooftop orbit splat</title>
+<style>
+  html, body { margin: 0; height: 100%; background: #111; color: #ddd; font: 13px/1.4 system-ui, sans-serif; }
+  canvas { display: block; }
+  #hud { position: fixed; left: 12px; top: 12px; background: rgba(0,0,0,.55); padding: 8px 10px; border-radius: 6px; }
+  #hud select { font: inherit; }
+</style>
+<script type="importmap">
+{ "imports": {
+  "three": "https://cdn.jsdelivr.net/npm/three@0.178.0/build/three.module.js",
+  "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.178.0/examples/jsm/",
+  "@sparkjsdev/spark": "https://cdn.jsdelivr.net/npm/@sparkjsdev/spark@0.1.10/dist/spark.module.js"
+} }
+</script>
+</head>
+<body>
+<div id="hud">
+  <select id="pick">
+    <option value="rooftop-close-v1|splat/splat.ply">close orbit: glide in, arc round the workshop</option>
+    <option value="rooftop-orbit-v2|splat/splat.ply">v2: one focal length</option>
+    <option value="rooftop-orbit-v1|splat/model3-81frames.ply">v1: two focal lengths, 81 frames</option>
+    <option value="rooftop-orbit-v1|splat/model0-16frames.ply">v1: 16 frames (first run)</option>
+  </select>
+  <div id="info">loading…</div>
+</div>
+<script type="module">
+import * as THREE from "three";
+import { OrbitControls } from "three/addons/controls/OrbitControls.js";
+import { SplatMesh } from "@sparkjsdev/spark";
+
+// Served from the repo root; the capture folders are gitignored.
+// Each option is "<capture>|<ply>"; every capture has its own view.json and lens.
+const pick = document.getElementById("pick");
+const renderer = new THREE.WebGLRenderer({ antialias: false });
+renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+document.body.appendChild(renderer.domElement);
+const scene = new THREE.Scene();
+const camera = new THREE.PerspectiveCamera(50, 1, 0.01, 1000);
+const controls = new OrbitControls(camera, renderer.domElement);
+controls.enableDamping = true;
+
+let splat, pose;
+async function load(value) {
+  const [capture, path] = value.split("|");
+  const base = `../../captures/${capture}/`;
+  pose = await fetch(base + "view.json", { cache: "no-store" }).then(r => r.json());
+  camera.position.fromArray(pose.camera);
+  controls.target.fromArray(pose.target);
+  window.view = { camera, controls, pose };
+  resize();
+  if (splat) { scene.remove(splat); splat.dispose(); }
+  splat = new SplatMesh({ url: base + path });
+  splat.quaternion.set(1, 0, 0, 0); // COLMAP is y-down, z-forward
+  scene.add(splat);
+  await splat.initialized;
+  const { fx, fy } = pose.intrinsics;
+  document.getElementById("info").textContent =
+    `${splat.numSplats?.toLocaleString() ?? "?"} splats · ${pose.frames} frames · fx ${fx.toFixed(0)} fy ${fy.toFixed(0)} · start = ${pose.frame}`;
+}
+pick.onchange = e => load(e.target.value);
+
+// Match the solved lens: letterbox the canvas to the clip and use its focal lengths.
+function resize() {
+  if (!pose) return;
+  const { w, h, fx, fy } = pose.intrinsics;
+  const s = Math.min(innerWidth / w, innerHeight / h);
+  renderer.setSize(Math.round(w * s), Math.round(h * s));
+  camera.fov = THREE.MathUtils.radToDeg(2 * Math.atan(h / 2 / fy));
+  camera.aspect = (w / 2 / fx) / (h / 2 / fy);
+  camera.updateProjectionMatrix();
+}
+addEventListener("resize", resize);
+await load(pick.value);
+renderer.setAnimationLoop(() => { controls.update(); renderer.render(scene, camera); });
+</script>
+</body>
+</html>
