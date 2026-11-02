@@ -1,5 +1,13 @@
 # Location Lab
 
+**Problem.** A Gaussian splat of a real place is sharp from some angles and soft from others, and you find out which only after you render.
+
+**Idea.** Scout the place in the browser first. Fly a camera through the splat, mark stills and record camera moves with a clean-angle map showing where the capture is sharp, then export a reference pack (card, ordered stills, camera-move clips) for Seedance 2.0's reference-to-video mode.
+
+**Built.** A static HTML draft of the scouting screen (one file, no build step) and one parked experiment that turned a Seedance orbit clip into a splat and a mesh. There is no app code yet. 11 commits on 3 days, Oct 22 to Oct 30, 2026.
+
+**Decision.** The splat comes from real drone and 360 footage, and the Seedance orbit-to-splat route is parked. Its Oct 30 test gave a backdrop and a lumpy blockout, because Seedance changes detail between frames and the splat averages that into blur.
+
 Scout a real place in the browser, then hand it to Seedance 2.0.
 
 ![Location Lab scouting screen draft: viewport with clean-angle map, stills and moves lists, location card and export target](docs/screenshots/scouting-screen.jpg)
